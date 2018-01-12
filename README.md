@@ -51,3 +51,7 @@ treating this project directory as usual purescript project.
 # Features Supported
 
 So far you can only run cells and it will display the output from the purescript REPL. Autocomplete or syntax highligthing or inspect do not work.
+
+# Known bugs
+
+- [ ] Multi-line input doesn't work
