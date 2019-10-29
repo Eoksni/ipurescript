@@ -7,7 +7,7 @@ It was tested on Windows, but should work on POSIX systems with little to no cha
 This project is in very early stage, but I already use it myself for learning `purescript`, 
 so it might be usable enough for you as well ;)
 
-** I don't have time anymore to work on this, feel free to continue it or start from scratch. **
+**I don't have time anymore to work on this, feel free to continue it or start from scratch.**
 
 # Install (for OS Windows)
 
