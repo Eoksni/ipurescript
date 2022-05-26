@@ -1,13 +1,13 @@
-# IPurescript
+# IDg
 
-This is a jupyter kernel for purescript. It is written as a wrapper kernel based on `ipykernel.kernelbase.Kernel`. 
+This is a jupyter kernel for dg language. It is written as a wrapper kernel based on `ipykernel.kernelbase.Kernel`. 
 
-It was tested on Windows, but should work on POSIX systems with little to no changes.
+This project is in very, very early stage.
 
-This project is in very early stage, but I already use it myself for learning `purescript`, 
-so it might be usable enough for you as well ;)
+Author: **I don't have time anymore to work on this, feel free to continue it or start from scratch.**
+Me: Will do bro, for Dg language.
 
-**I don't have time anymore to work on this, feel free to continue it or start from scratch.**
+TODO: REST OF THE CONTENT WILL BE CHANGE
 
 # Install (for OS Windows)
 
@@ -55,5 +55,3 @@ treating this project directory as usual purescript project.
 So far you can only run cells and it will display the output from the purescript REPL. Autocomplete or syntax highligthing or inspect do not work.
 
 # Known bugs
-
-- [ ] Multi-line input doesn't work
