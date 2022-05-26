@@ -2,10 +2,10 @@
     "argv": [
         "python",
         "-m",
-        "ipurescript",
+        "idg",
         "-f",
         "{connection_file}"
     ],
-    "display_name": "IPurescript",
-    "language": "purescript"
+    "display_name": "Idg",
+    "language": "dg"
 }
