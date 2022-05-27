@@ -57,7 +57,7 @@ class IdgKernel(Kernel):
 
             f = io.StringIO()
             with redirect_stdout(f):
-                eval_ = self.eval_(code_, module)
+                eval_ = self.eval_(code, module)
                 std_out_ = f.getvalue()
 
             ret_ = ''
