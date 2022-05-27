@@ -44,7 +44,7 @@ None.
 
 # Example notebook
 
-[Example notebook](example.gif)
+![Example notebook](./example.gif)
 
 # Features Supported
 
