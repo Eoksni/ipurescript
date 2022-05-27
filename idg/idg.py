@@ -8,6 +8,7 @@ import signal
 import subprocess
 import sys
 import dg
+import re
 
 from ipykernel.kernelbase import Kernel
 
