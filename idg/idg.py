@@ -91,7 +91,10 @@ class IdgKernel(Kernel):
                 ret_ = ret_ + str(eval_)
 
             if isinstance(eval_, matplotlib.figure.Figure):
-                png_ = self._to_png(eval_)
+                fig_ = eval_
+                png_ = self._to_png(fig_)
+                [width_, height_] = fig_.get_size_inches()
+                dpi_ = fig_.dpi
                 content_ = {
                     'source': 'kernel',
                     'data': {
@@ -99,8 +102,8 @@ class IdgKernel(Kernel):
                     },
                     'metadata' : {
                         'image/png' : {
-                            'width': 600,
-                            'height': 400
+                            'width': width_ * dpi_,
+                            'height': height_ * dpi_
                         }
                     }
                 }
