@@ -2,29 +2,31 @@
 
 This is a jupyter kernel for dg language. It is written as a wrapper kernel based on `ipykernel.kernelbase.Kernel`. 
 
-This project is in very, very early stage.
+This project is in relatively early stage.
 
 Author: **I don't have time anymore to work on this, feel free to continue it or start from scratch.**
 Me: Will do bro, for Dg language.
 
 TODO: REST OF THE CONTENT WILL BE CHANGE
 
-# Install (for OS Windows)
+# Install: MacOS
 
-First install `purescript`, so that you have `pulp` command in your shell. Then,
+# Install: Windows
+
+First install `dg`, so that you have `dg` package in your python environment. Then,
 
 ```
-git clone https://github.com/Eoksni/ipurescript
+git clone https://github.com/LeaveNhA/idg
 cd ipurescript
-jupyter kernelspec install ipurescript
+jupyter kernelspec install idg
 ```
 
 It should give you something like
 ```
-[InstallKernelSpec] Installed kernelspec ipurescript in C:\ProgramData\jupyter\kernels\ipurescript
+[InstallKernelSpec] Installed kernelspec idg in C:\ProgramData\jupyter\kernels\idg
 ```
 
-Take that path `C:\ProgramData\jupyter\kernels` (without `ipurescript` part) and add it to `PYTHONPATH` environment variable.
+Take that path `C:\ProgramData\jupyter\kernels` (without `idg` part) and add it to `PYTHONPATH` environment variable.
 
 Then you can run the jupyter normally
 
@@ -33,25 +35,21 @@ jupyter notebook
 ```
 or
 ```
-jupyter console --kernel ipurescript
+jupyter console --kernel idg
 ```
 
 # Important notes
 
-On the first launch, the kernel will create and initialize a purescript 
-project in directory `temp` at the path where the kernel was installed (ie `C:\ProgramData\jupyter\kernels\ipurescript\temp`).
-
-This project directory is shared among all kernels instances. 
-
-If you need additional `purescript` dependencies installed, you can do it normally,
-treating this project directory as usual purescript project.
+None.
 
 # Example notebook
 
-[Example notebook](example.png)
+[Example notebook](example.gif)
 
 # Features Supported
 
-So far you can only run cells and it will display the output from the purescript REPL. Autocomplete or syntax highligthing or inspect do not work.
+TODO
 
 # Known bugs
+
+Lots of, I believe? Please inform me with issues.
