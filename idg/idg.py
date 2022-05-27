@@ -52,6 +52,8 @@ class IdgKernel(Kernel):
     def do_execute(self, code, silent, store_history=True, user_expressions=None,
                    allow_stdin=False):
         if not silent:
+            re.sub(r'^\%', '', code, flags=re.MULTILINE)
+
             f = io.StringIO()
             #module = {}
             with redirect_stdout(f):
