@@ -1,5 +1,5 @@
 """
-This is simplest possible kernel for dg based on echokernel + pexpect
+This is simplest possible kernel for dg based on echokernel.
 """
 
 import errno
