@@ -9,6 +9,10 @@ import subprocess
 import sys
 import dg
 import re
+import matplotlib.pyplot as plt
+import matplotlib
+from io import BytesIO
+import urllib, base64
 
 from ipykernel.kernelbase import Kernel
 
@@ -54,17 +58,29 @@ class IdgKernel(Kernel):
         else:
             return eval(dg.compile(code_, '<file>'), module_.__dict__)
 
+    def _to_png(self, fig_):
+        """Return a base64-encoded PNG from a
+        matplotlib figure."""
+        imgdata_ = BytesIO()
+        fig_.savefig(imgdata_, format='png')
+        imgdata_.seek(0)
+        return urllib.parse.quote(
+            base64.b64encode(imgdata_.getvalue()))
+
     def do_execute(self, code, silent, store_history=True, user_expressions=None,
                    allow_stdin=False):
         if not silent:
             code = re.sub(r'^\%.*\n?', '', code, flags=re.MULTILINE)
 
+            errorflag_ = False
             f = io.StringIO()
             with redirect_stdout(f):
                 try:
                     eval_ = self.eval_(code, module)
-                except (RuntimeError, TypeError, NameError) as e:
+                except (RuntimeError, TypeError, NameError, AttributeError, ValueError) as e:
+                    errorflag_ = True
                     eval_ = str(e)
+
                 std_out_ = f.getvalue()
 
             ret_ = ''
@@ -74,13 +90,32 @@ class IdgKernel(Kernel):
             if eval_ is not None:
                 ret_ = ret_ + str(eval_)
 
-            stream_content = {'name': 'stdout',
+            if isinstance(eval_, matplotlib.figure.Figure):
+                png_ = self._to_png(eval_)
+                content_ = {
+                    'source': 'kernel',
+                    'data': {
+                        'image/png': png_
+                    },
+                    'metadata' : {
+                        'image/png' : {
+                            'width': 600,
+                            'height': 400
+                        }
+                    }
+                }
+                self.send_response(self.iopub_socket,
+                                   'display_data', content_)
+
+            stream_content = {'name': 'stderr' if errorflag_ else 'stdout',
                               'text': ret_}
             self.send_response(self.iopub_socket, 'stream', stream_content)
 
-        return {
-            'status': 'ok',
+        finaldata_ = {
+            'status': 'error' if errorflag_ else 'ok',
             'execution_count': self.execution_count,
             'payload': [],
             'user_expressions': {},
         }
+
+        return finaldata_
