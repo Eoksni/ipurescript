@@ -25,8 +25,12 @@ class IdgKernel(Kernel):
     language_version = '1.1.0' #??
     language_info = {
         'name': 'Dg',
-        'mimetype': 'text/plain',
+        'mimetype': 'text/dg',
         'file_extension': '.dg',
+        'codemirror_mode': {
+            'name': 'haskell'
+        },
+        'pygments_lexer': 'haskell'
     }
     banner = "Idg kernel - awesomeness exceeds all limit!"
 
@@ -64,7 +68,7 @@ class IdgKernel(Kernel):
             if len(std_out_) > 0:
                 ret_ = str(std_out_) + '\n'
 
-            if eval_ != None:
+            if eval_ is None:
                 ret_ = ret_ + str(eval_)
 
             stream_content = {'name': 'stdout',
