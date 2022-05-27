@@ -10,8 +10,9 @@ import sys
 import dg
 
 from ipykernel.kernelbase import Kernel
-from pexpect import popen_spawn
 
+import io
+from contextlib import redirect_stdout
 
 class IdgKernel(Kernel):
     """
@@ -30,18 +31,42 @@ class IdgKernel(Kernel):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.eval_("import '/dg/types'")
+        self.eval_("import '/dg/builtins'")
+        #self.eval_("")
+        self.eval_("import '/dg/add_module_builtins'")
+        self.eval_("module = sys.modules !! '__main__' = types.ModuleType '__main__'")
+        self.eval_("add_module_builtins (sys.modules !! '__main__')")
+        self.eval_("add_module_builtins module")
 
         # initializing dg repl:
         # -this project will be shared among all kernels
         # +will do bro!
 
+    def eval_(self, code_, module_ = None):
+        if module_ is None:
+            return eval(dg.compile(code_, '<file>'))
+        else:
+            return eval(dg.compile(code_, '<file>'), module_.__dict__)
+
     def do_execute(self, code, silent, store_history=True, user_expressions=None,
                    allow_stdin=False):
         if not silent:
-            ret_ = eval(dg.compile(code))
+            f = io.StringIO()
+            #module = {}
+            with redirect_stdout(f):
+                eval_ = self.eval_(code, module)
+                std_out_ = f.getvalue()
+
+            ret_ = ''
+            if len(std_out_) > 0:
+                ret_ = str(std_out_) + '\n'
+
+            if eval_ != None:
+                ret_ = ret_ + str(eval_)
 
             stream_content = {'name': 'stdout',
-                              'text': str(ret_)}
+                              'text': ret_}
             self.send_response(self.iopub_socket, 'stream', stream_content)
 
         return {
