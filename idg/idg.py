@@ -28,9 +28,9 @@ class IdgKernel(Kernel):
         'mimetype': 'text/dg',
         'file_extension': '.dg',
         'codemirror_mode': {
-            'name': 'haskell'
+            'name': 'python'
         },
-        'pygments_lexer': 'haskell'
+        'pygments_lexer': 'ipython3'
     }
     banner = "Idg kernel - awesomeness exceeds all limit!"
 
@@ -61,14 +61,17 @@ class IdgKernel(Kernel):
 
             f = io.StringIO()
             with redirect_stdout(f):
-                eval_ = self.eval_(code, module)
+                try:
+                    eval_ = self.eval_(code, module)
+                except (RuntimeError, TypeError, NameError) as e:
+                    eval_ = str(e)
                 std_out_ = f.getvalue()
 
             ret_ = ''
             if len(std_out_) > 0:
                 ret_ = str(std_out_) + '\n'
 
-            if eval_ is None:
+            if eval_ is not None:
                 ret_ = ret_ + str(eval_)
 
             stream_content = {'name': 'stdout',
