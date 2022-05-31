@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 from io import BytesIO
 import urllib, base64
+import IPython
 
 from ipykernel.kernelbase import Kernel
 
@@ -42,15 +43,52 @@ class IdgKernel(Kernel):
         super().__init__(**kwargs)
         self.eval_("import '/dg/types'")
         self.eval_("import '/dg/builtins'")
+        self.eval_("import '/dg/BUILTINS'")
+        self.eval_("Compiler = import '/dg/Compiler'")
         #self.eval_("")
         self.eval_("import '/dg/add_module_builtins'")
         self.eval_("module = sys.modules !! '__main__' = types.ModuleType '__main__'")
         self.eval_("add_module_builtins (sys.modules !! '__main__')")
         self.eval_("add_module_builtins module")
+        #self.eval_("completion_ns = globals!")
+        self.eval_("""
+      __complete_word = word ->
+            path, dot, word = word.rpartition '.'
+            completion_ns = globals!
+            sorted $ map (path + dot +) $
+                # Hide private attributes unless an underscore was typed.
+                filter (w -> w.startswith word and (word or not (w.startswith '_'))) $ if
+                    not path  => set Compiler.prefix | set BUILTINS | set completion_ns
+                    otherwise => except
+                        err => dir $ eval path completion_ns
+                        err `isinstance` Exception => []""")
 
         # initializing dg repl:
         # -this project will be shared among all kernels
         # +will do bro!
+
+    def do_complete(self, code_, cursor_pos_):
+        code_ = code_[:cursor_pos_]
+        real_cursor_pos_in_code_ = abs(cursor_pos_ - (code_.count(' ') + code_.count('\n')))
+        splitted_code_ = code_.split()
+        # LOL??
+        #raise Exception('code:' + code_ + '\n' + 'cursor-pos:' + str(cursor_pos_) + '\n' + 'real-cursor-pos:' + str(real_cursor_pos_in_code_))
+        z = 0
+        splitted_code_f_ = ""
+        for i in range(len(splitted_code_)):
+            real_cursor_pos_in_code_ -= len(splitted_code_[i])
+            if real_cursor_pos_in_code_ <= 0:
+                splitted_code_f_ = splitted_code_[i]
+                real_cursor_pos_end_ = len(splitted_code_f_)
+                break
+
+        completion_results_ = self.eval_('__complete_word ' + '"{}"'.format(splitted_code_f_))
+
+        return {'status': 'ok',
+                'matches': completion_results_,
+                'cursor_start' : cursor_pos_,
+                'cursor_end' : cursor_pos_ - real_cursor_pos_end_,
+                'metadata' : {}}
 
     def eval_(self, code_, module_ = None):
         if module_ is None:
@@ -77,7 +115,9 @@ class IdgKernel(Kernel):
             with redirect_stdout(f):
                 try:
                     eval_ = self.eval_(code, module)
-                except (RuntimeError, TypeError, NameError, AttributeError, ValueError) as e:
+                except (RuntimeError, TypeError, NameError,
+                        AttributeError, ValueError,
+                        dg.SyntaxError, ImportError) as e:
                     errorflag_ = True
                     eval_ = str(e)
 
@@ -90,7 +130,18 @@ class IdgKernel(Kernel):
             if eval_ is not None:
                 ret_ = ret_ + str(eval_)
 
-            if isinstance(eval_, matplotlib.figure.Figure):
+            if isinstance(eval_, IPython.core.display.Markdown):
+                data_ = eval_.data
+                content_ = {
+                    'source': 'kernel',
+                    'data': {
+                        'text/markdown': data_
+                    },
+                    'metadata' : {}
+                }
+                self.send_response(self.iopub_socket,
+                                   'display_data', content_)
+            elif isinstance(eval_, matplotlib.figure.Figure):
                 fig_ = eval_
                 png_ = self._to_png(fig_)
                 [width_, height_] = fig_.get_size_inches()
