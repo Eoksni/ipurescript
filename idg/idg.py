@@ -54,7 +54,7 @@ class IdgKernel(Kernel):
         self.eval_("""
       __complete_word = word ->
             path, dot, word = word.rpartition '.'
-            completion_ns = globals!
+            completion_ns = (sys.modules !! '__main__') |>.__dict__
             sorted $ map (path + dot +) $
                 # Hide private attributes unless an underscore was typed.
                 filter (w -> w.startswith word and (word or not (w.startswith '_'))) $ if
@@ -82,7 +82,8 @@ class IdgKernel(Kernel):
                 real_cursor_pos_end_ = len(splitted_code_f_)
                 break
 
-        completion_results_ = self.eval_('__complete_word ' + '"{}"'.format(splitted_code_f_))
+        completion_results_ = self.eval_('__complete_word ' + '"{}"'.format(splitted_code_f_),
+                                         self.eval_('globals!'))
 
         return {'status': 'ok',
                 'matches': completion_results_,
@@ -94,7 +95,7 @@ class IdgKernel(Kernel):
         if module_ is None:
             return eval(dg.compile(code_, '<file>'))
         else:
-            return eval(dg.compile(code_, '<file>'), module_.__dict__)
+            return eval(dg.compile(code_, '<file>'), module_)
 
     def _to_png(self, fig_):
         """Return a base64-encoded PNG from a
@@ -114,7 +115,7 @@ class IdgKernel(Kernel):
             f = io.StringIO()
             with redirect_stdout(f):
                 try:
-                    eval_ = self.eval_(code, module)
+                    eval_ = self.eval_(code, module.__dict__)
                 except (RuntimeError, TypeError, NameError,
                         AttributeError, ValueError,
                         dg.SyntaxError, ImportError) as e:
