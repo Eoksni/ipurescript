@@ -1,6 +1,6 @@
 # IDg
 
-This is a jupyter kernel for dg language. It is written as a wrapper kernel based on `ipykernel.kernelbase.Kernel`. 
+This is a jupyter kernel for dg language. It is written as a wrapper kernel based on `/ipykernel/ipkernel/IPythonKernel`
 
 This project is in relatively early stage.
 
