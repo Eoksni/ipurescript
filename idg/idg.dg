@@ -34,18 +34,23 @@ IdgKernel = subclass IdgKernelPy where
         @@__init__ **: kwargs
         None
 
-    eval_ = code module ~>
+    eval_ = code module: None ~>
           compiled_ = dg.compile code '<file>'
           if
             module is None => eval compiled_
             otherwise => eval compiled_ module
 
-    do_execute_experimental = code silent store_history: True user_expressions: None ~>
+    do_execute = code silent store_history: True user_expressions: None allow_stdin: False ~>
                         if not silent =>
                             f__ = StringIO!
-                            with redirect_stdout f =>
-                                 evalresult_ = @eval_ (dg.compile code) (globals!)
-                                 @std_out = f.getvalue!
+                            with redirect_stdout f__ =>
+                                 evalresult_ = @eval_ code (globals!)
+                                 @std_out = f__.getvalue!
+
+                            @send_response @iopub_socket 'stream' {('name', 'stdout'), ('text', (str evalresult_))}
+                            {('status', 'ok'), ('execution_count', self.execution_count),
+                              ('payload', []),
+                              ('user_expressions', {})}
 
     do_complete = code_ cursor_position_ ~>
         np = import '/numpy'
