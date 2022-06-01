@@ -12,6 +12,10 @@ comm = import '/ipykernel/comm'
 [CommManager, Comm] = [comm.CommManager, comm.Comm]
 Widget = import '/ipywidgets/Widget'
 tokenutil = import '/IPython/utils/tokenutil'
+BytesIO = import '/io/BytesIO'
+Figure = import '/matplotlib/figure/Figure'
+urllib = import '/urllib'
+base64 = import '/base64'
 
 IdgKernel = subclass Kernel where
     #: Ütopik bir çekirdek girişimi.
@@ -24,9 +28,7 @@ IdgKernel = subclass Kernel where
     language_version = '1.1.0' #??
     banner = "Dg will rule the Doges."
 
-    execution_count = 0 # Should I really do that??
-
-    execution_count =
+    _execution_count = 0 # Should I really do that??
 
     __complete_word = word ~>
         path, dot, word = word.rpartition '.'
@@ -56,6 +58,13 @@ IdgKernel = subclass Kernel where
             module is None => eval compiled_
             otherwise => eval compiled_ module
 
+    to_png = fig_ ~>
+      imgdata_ = BytesIO!
+      fig_.savefig imgdata_ format:'png'
+      imgdata_.seek 0
+      urllib.parse.quote (base64.b64encode (imgdata_.getvalue!))
+
+
     do_execute = code silent store_history: True user_expressions: None allow_stdin: False ~>
                if not silent =>
                   @send_response @iopub_socket 'stream' (@to_response '{Under heavy development!}\n' 'stdout')
@@ -67,15 +76,19 @@ IdgKernel = subclass Kernel where
                       #@send_response @iopub_socket 'stream' (@to_response ('HATA:' + captured_output_.stderr + '\n' + (str err_)))
                       @send_response @iopub_socket 'stream' (@to_response @captured_output_.stderr type: 'stderr')
                     err_ is None =>
-                      @execution_count = @execution_count + 1
+                      @_execution_count = @_execution_count + 1
                       @send_response @iopub_socket 'stream' (@to_response @captured_output_.stdout)
                       #@send_response @iopub_socket 'stream' (@to_response '\nCaptured outputs:')
                       #for output_ in @captured_output_.outputs => @send_response @iopub_socket 'stream' (@to_response (str (getattr output_ 'content' None)) + '!!!!!')
                       #@send_response @iopub_socket 'stream' (@to_response '\nDisplay Data:')
                       for output_ in @captured_output_.outputs => @send_response @iopub_socket 'display_data' output_.__dict__
                       #@send_response @iopub_socket 'stream' (@to_response '\nEvaluation result:')
+                      if @evalresult_ :: Figure =>
+                        [width_, height_] = @evalresult_.get_size_inches!
+                        dpi_ = @evalresult_.dpi
+                        @send_response @iopub_socket 'display_data' {('source', 'kernel'), ('data', {('image/png', (@to_png @evalresult_))}), ('metadata', {('image/png', {('width', width_ * dpi_), ('height', height_ * dpi_)})})}
                       @send_response @iopub_socket 'stream' (@to_response (str @evalresult_))
-               {('status', 'ok'), ('execution_count', @execution_count), ('payload', list!), ('user_expressions', dict!)}
+               {('status', 'ok'), ('execution_count', @_execution_count), ('payload', list!), ('user_expressions', dict!)}
 
     do_complete = code_ cursor_position_ ~>
       if cursor_position_ is None => cursor_position_ = len code_
