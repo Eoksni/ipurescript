@@ -7,15 +7,16 @@ Compiler = import '/dg/Compiler'
 BUILTINS = import '/dg/BUILTINS'
 dg = import '/dg'
 capture = import '/IPython/utils/capture'
-BytesIO = import '/io/BytesIO'
-display = import '/IPython/display/display'
-Image = import '/IPython/display/Image'
+comm = import '/ipykernel/comm'
+[CommManager, Comm] = [comm.CommManager, comm.Comm]
+Widget = import '/ipywidgets/Widget'
 
 IdgKernel = subclass Kernel where
     #: Ütopik bir çekirdek girişimi.
     #:
     implementation = 'Idg'
     implementation_version = '1.0'
+    display_name = 'test'
     language = 'dg'
     language_info = ({('name', 'Dg'), ('mimetype', 'text/dg'), ('file_extension', '.dg'), ('codemirror_mode', {('name', 'python')}), ('pygments_lexer', 'ipython3')})
     language_version = '1.1.0' #??
@@ -35,6 +36,9 @@ IdgKernel = subclass Kernel where
     # Init?
     __init__ = *: args **: kwargs ~>
         @@__init__ **: kwargs
+        @comm_manager = CommManager parent: self kernel: self
+        @comm_manager.register_target 'jupyter.widget' Widget.handle_comm_opened
+        @comm = Comm target_name:'jupyter.widget'
         None
 
     to_response = context type: 'stdout' ~>
@@ -46,31 +50,23 @@ IdgKernel = subclass Kernel where
             module is None => eval compiled_
             otherwise => eval compiled_ module
 
-    to_png = fig ~>
-      imgdata_ = BytesIO()
-      fig_.savefig imgdata_ format:'png'
-      imgdata_.seek 0
-      urllib.parse.quote (base64.b64encode (imgdata_.getvalue!))
-
     do_execute = code silent store_history: True user_expressions: None allow_stdin: False ~>
                if not silent =>
                   @send_response @iopub_socket 'stream' (@to_response '{Under heavy development!!!}\n' 'stdout')
                   except
                     err_ =>
-                      with captured_output_ = capture.capture_output display: True =>
+                      with captured_output_ = capture.capture_output! =>
                         @evalresult_ = @eval_ code (globals!)
                     err_ :: Exception =>
                       @send_response @iopub_socket 'stream' (@to_response ('HATA:' + captured_output_.stderr + '\n' + (str err_)))
                       @send_response @iopub_socket 'stream' (@to_response captured_output_.stderr type: 'stderr')
                     err_ is None =>
                       @send_response @iopub_socket 'stream' (@to_response captured_output_.stdout)
-                      @send_response @iopub_socket 'stream' (@to_response '\n')
-                      if @evalresult_ :: matplotlib.figure.Figure =>
-                        @send_response @iopub_socket 'stream' (@to_response (str (Image (@to_png @evalresult_)).__dict__))
-                      for output_ in captured_output_.outputs =>
-                        @send_response @iopub_socket 'display_data' {('source', 'kernel'), ('data', ({(output_.)}))}
-                        #@send_response @iopub_socket 'stream' (@to_response (str output_.__dict__))
-                      @send_response @iopub_socket 'stream' (@to_response '\n')
+                      @send_response @iopub_socket 'stream' (@to_response '\nCaptured outputs:')
+                      for output_ in captured_output_.outputs => @send_response @iopub_socket 'stream' (@to_response (str output_))
+                      @send_response @iopub_socket 'stream' (@to_response '\nDisplay Data:')
+                      for output_ in captured_output_.outputs => @send_response @iopub_socket 'display_data' output_.__dict__
+                      @send_response @iopub_socket 'stream' (@to_response '\nEvaluation result:')
                       @send_response @iopub_socket 'stream' (@to_response (str @evalresult_))
                {('status', 'ok'), ('execution_count', self.execution_count), ('payload', list!), ('user_expressions', dict!)}
 
