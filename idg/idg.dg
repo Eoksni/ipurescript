@@ -1,6 +1,7 @@
-Kernel = import '/IPython/kernel/zmq/kernelbase/Kernel'
-
-IdgKernelPy = import 'idgold/IdgKernelPy'
+# Önerilmez olarak işaretlenmiş!
+# Kernel = import '/IPython/kernel/zmq/kernelbase/Kernel'
+# Kernel = import '/ipykernel/kernelbase/Kernel'
+Kernel = import '/ipykernel/ipkernel/IPythonKernel'
 
 sys = import '/sys'
 Compiler = import '/dg/Compiler'
@@ -10,6 +11,7 @@ capture = import '/IPython/utils/capture'
 comm = import '/ipykernel/comm'
 [CommManager, Comm] = [comm.CommManager, comm.Comm]
 Widget = import '/ipywidgets/Widget'
+tokenutil = import '/IPython/utils/tokenutil'
 
 IdgKernel = subclass Kernel where
     #: Ütopik bir çekirdek girişimi.
@@ -21,6 +23,10 @@ IdgKernel = subclass Kernel where
     language_info = ({('name', 'Dg'), ('mimetype', 'text/dg'), ('file_extension', '.dg'), ('codemirror_mode', {('name', 'python')}), ('pygments_lexer', 'ipython3')})
     language_version = '1.1.0' #??
     banner = "Dg will rule the Doges."
+
+    execution_count = 0 # Should I really do that??
+
+    execution_count =
 
     __complete_word = word ~>
         path, dot, word = word.rpartition '.'
@@ -52,28 +58,28 @@ IdgKernel = subclass Kernel where
 
     do_execute = code silent store_history: True user_expressions: None allow_stdin: False ~>
                if not silent =>
-                  @send_response @iopub_socket 'stream' (@to_response '{Under heavy development!!!}\n' 'stdout')
+                  @send_response @iopub_socket 'stream' (@to_response '{Under heavy development!}\n' 'stdout')
                   except
                     err_ =>
-                      with captured_output_ = capture.capture_output! =>
+                      with @captured_output_ = capture.capture_output! =>
                         @evalresult_ = @eval_ code (globals!)
                     err_ :: Exception =>
-                      @send_response @iopub_socket 'stream' (@to_response ('HATA:' + captured_output_.stderr + '\n' + (str err_)))
-                      @send_response @iopub_socket 'stream' (@to_response captured_output_.stderr type: 'stderr')
+                      #@send_response @iopub_socket 'stream' (@to_response ('HATA:' + captured_output_.stderr + '\n' + (str err_)))
+                      @send_response @iopub_socket 'stream' (@to_response @captured_output_.stderr type: 'stderr')
                     err_ is None =>
-                      @send_response @iopub_socket 'stream' (@to_response captured_output_.stdout)
-                      @send_response @iopub_socket 'stream' (@to_response '\nCaptured outputs:')
-                      for output_ in captured_output_.outputs => @send_response @iopub_socket 'stream' (@to_response (str output_))
-                      @send_response @iopub_socket 'stream' (@to_response '\nDisplay Data:')
-                      for output_ in captured_output_.outputs => @send_response @iopub_socket 'display_data' output_.__dict__
-                      @send_response @iopub_socket 'stream' (@to_response '\nEvaluation result:')
+                      @execution_count = @execution_count + 1
+                      @send_response @iopub_socket 'stream' (@to_response @captured_output_.stdout)
+                      #@send_response @iopub_socket 'stream' (@to_response '\nCaptured outputs:')
+                      #for output_ in @captured_output_.outputs => @send_response @iopub_socket 'stream' (@to_response (str (getattr output_ 'content' None)) + '!!!!!')
+                      #@send_response @iopub_socket 'stream' (@to_response '\nDisplay Data:')
+                      for output_ in @captured_output_.outputs => @send_response @iopub_socket 'display_data' output_.__dict__
+                      #@send_response @iopub_socket 'stream' (@to_response '\nEvaluation result:')
                       @send_response @iopub_socket 'stream' (@to_response (str @evalresult_))
-               {('status', 'ok'), ('execution_count', self.execution_count), ('payload', list!), ('user_expressions', dict!)}
+               {('status', 'ok'), ('execution_count', @execution_count), ('payload', list!), ('user_expressions', dict!)}
 
     do_complete = code_ cursor_position_ ~>
-        np = import '/numpy'
-        code__ = code_ !! slice 0 (cursor_position_ + 1)
-        splitted_code_ = code__.split!
-        word_ = last splitted_code_
-        completion_results_ = @__complete_word word_
-        dict status: 'ok' matches: completion_results_ cursor_start: (cursor_position_ - (len word_)) cursor_end: cursor_position_ metadata: dict!
+      if cursor_position_ is None => cursor_position_ = len code_
+      [line_, offset_] = tokenutil.line_at_cursor code_ cursor_position_
+      line_cursor_ = cursor_position_ - offset_
+      completion_results_ = @__complete_word line_
+      dict status: 'ok' matches: completion_results_ cursor_start: (cursor_position_ - (len line_)) cursor_end: cursor_position_ metadata: dict!
