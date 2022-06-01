@@ -6,15 +6,15 @@ sys = import '/sys'
 Compiler = import '/dg/Compiler'
 BUILTINS = import '/dg/BUILTINS'
 dg = import '/dg'
-redirect_stdout = import '/contextlib/redirect_stdout'
-StringIO = import '/io/StringIO'
+capture = import '/IPython/utils/capture'
 
-IdgKernel = subclass IdgKernelPy where
+IdgKernel = subclass Kernel where
     #: Ütopik bir çekirdek girişimi.
     #:
     implementation = 'Idg'
     implementation_version = '1.0'
     language = 'dg'
+    language_info = ({('name', 'Dg'), ('mimetype', 'text/dg'), ('file_extension', '.dg'), ('codemirror_mode', {('name', 'python')}), ('pygments_lexer', 'ipython3')})
     language_version = '1.1.0' #??
     banner = "Dg will rule the Doges."
 
@@ -34,6 +34,9 @@ IdgKernel = subclass IdgKernelPy where
         @@__init__ **: kwargs
         None
 
+    to_response = context type: 'stdout' ~>
+      dict name: type text: context
+
     eval_ = code module: None ~>
           compiled_ = dg.compile code '<file>'
           if
@@ -41,16 +44,22 @@ IdgKernel = subclass IdgKernelPy where
             otherwise => eval compiled_ module
 
     do_execute = code silent store_history: True user_expressions: None allow_stdin: False ~>
-                        if not silent =>
-                            f__ = StringIO!
-                            with redirect_stdout f__ =>
-                                 evalresult_ = @eval_ code (globals!)
-                                 @std_out = f__.getvalue!
-
-                            @send_response @iopub_socket 'stream' {('name', 'stdout'), ('text', (str evalresult_))}
-                            {('status', 'ok'), ('execution_count', self.execution_count),
-                              ('payload', []),
-                              ('user_expressions', {})}
+               if not silent =>
+                  @send_response @iopub_socket 'stream' (@to_response '{Under heavy development!!!}\n' 'stdout')
+                  except
+                    err_ =>
+                      with captured_output_ = capture.capture_output! =>
+                        @evalresult_ = @eval_ code (globals!)
+                    err_ :: Exception =>
+                      @send_response @iopub_socket 'stream' (@to_response ('HATA:' + captured_output_.stderr + '\n' + (str err_)))
+                      @send_response @iopub_socket 'stream' (@to_response captured_output_.stderr type: 'stderr')
+                    err_ is None =>
+                      @send_response @iopub_socket 'stream' (@to_response captured_output_.stdout)
+                      @send_response @iopub_socket 'stream' (@to_response '\n')
+                      for output_ in captured_output_.outputs => @send_response @iopub_socket 'display_data' (vars output_)
+                      @send_response @iopub_socket 'stream' (@to_response '\n')
+                      @send_response @iopub_socket 'stream' (@to_response (str @evalresult_))
+               {('status', 'ok'), ('execution_count', self.execution_count), ('payload', list!), ('user_expressions', dict!)}
 
     do_complete = code_ cursor_position_ ~>
         np = import '/numpy'
@@ -58,7 +67,4 @@ IdgKernel = subclass IdgKernelPy where
         splitted_code_ = code__.split!
         word_ = last splitted_code_
         completion_results_ = @__complete_word word_
-        dict status: 'ok' matches: completion_results_
-                cursor_start: (cursor_position_ - (len word_))
-                cursor_end: cursor_position_
-                metadata: dict!
+        dict status: 'ok' matches: completion_results_ cursor_start: (cursor_position_ - (len word_)) cursor_end: cursor_position_ metadata: dict!
