@@ -2,6 +2,8 @@
     "argv": [
         "python",
         "-m",
+        "dg",
+        "-m",
         "idg",
         "-f",
         "{connection_file}"

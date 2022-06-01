@@ -20,7 +20,7 @@ from ipykernel.kernelbase import Kernel
 import io
 from contextlib import redirect_stdout
 
-class IdgKernel(Kernel):
+class IdgKernelPy(Kernel):
     """
     Idg: jupyter kernel for dg
     """

@@ -1,0 +1,59 @@
+Kernel = import '/IPython/kernel/zmq/kernelbase/Kernel'
+
+IdgKernelPy = import 'idgold/IdgKernelPy'
+
+sys = import '/sys'
+Compiler = import '/dg/Compiler'
+BUILTINS = import '/dg/BUILTINS'
+dg = import '/dg'
+redirect_stdout = import '/contextlib/redirect_stdout'
+StringIO = import '/io/StringIO'
+
+IdgKernel = subclass IdgKernelPy where
+    #: Ütopik bir çekirdek girişimi.
+    #:
+    implementation = 'Idg'
+    implementation_version = '1.0'
+    language = 'dg'
+    language_version = '1.1.0' #??
+    banner = "Dg will rule the Doges."
+
+    __complete_word = word ~>
+        path, dot, word = word.rpartition '.'
+        completion_ns = (sys.modules !! '__main__') |>.__dict__
+        sorted $ map (path + dot +) $
+            # Hide private attributes unless an underscore was typed.
+            filter (w -> w.startswith word and (word or not (w.startswith '_'))) $ if
+                not path  => set Compiler.prefix | set BUILTINS | set completion_ns
+                otherwise => except
+                    err => dir $ eval path completion_ns
+                    err `isinstance` Exception => []
+
+    # Init?
+    __init__ = *: args **: kwargs ~>
+        @@__init__ **: kwargs
+        None
+
+    eval_ = code module ~>
+          compiled_ = dg.compile code '<file>'
+          if
+            module is None => eval compiled_
+            otherwise => eval compiled_ module
+
+    do_execute_experimental = code silent store_history: True user_expressions: None ~>
+                        if not silent =>
+                            f__ = StringIO!
+                            with redirect_stdout f =>
+                                 evalresult_ = @eval_ (dg.compile code) (globals!)
+                                 @std_out = f.getvalue!
+
+    do_complete = code_ cursor_position_ ~>
+        np = import '/numpy'
+        code__ = code_ !! slice 0 (cursor_position_ + 1)
+        splitted_code_ = code__.split!
+        word_ = last splitted_code_
+        completion_results_ = @__complete_word word_
+        dict status: 'ok' matches: completion_results_
+                cursor_start: (cursor_position_ - (len word_))
+                cursor_end: cursor_position_
+                metadata: dict!
